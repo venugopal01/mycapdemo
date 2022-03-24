@@ -1,0 +1,4 @@
+#2.0#2022 01 28 06:16:09.262#Z#DEBUG#com.sap.cloud.lm.sl.xs2.ad963e54-8001-11ec-b1ab-eeee0a9f7be4.mycapdemo-app-content_mycapdemo_html_repo_host.startContentDeployTask#
+######org.cloudfoundry.multiapps.controller.persistence.services.ProcessLogger########flowable-async-job-executor-thread-39105###
+[PollDeployContentStatusExecution] [mycapdemo-app-content] [INFO] Application content was successfully uploaded { CODE: '1002' }#
+

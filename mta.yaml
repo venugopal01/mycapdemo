@@ -1,0 +1,127 @@
+_schema-version: "3.1"
+ID: mycapdemo
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: mycapdemo-srv
+  type: nodejs
+  path: srv
+  requires:
+  - name: mycapdemo-db
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+  build-parameters:
+    builder: npm-ci
+- name: mycapdemo-db-deployer
+  type: hdb
+  path: db
+  requires:
+  - name: mycapdemo-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: mycapdemo-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: mycapdemo-destination-service
+    parameters:
+      content-target: true
+  - name: mycapdemo_html_repo_host
+    parameters:
+      service-key:
+        name: mycapdemo_html_repo_host-key
+  - name: uaa_mycapdemo
+    parameters:
+      service-key:
+        name: uaa_mycapdemo-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: capdemo_app_mycapdemo_html_repo_host
+          ServiceInstanceName: mycapdemo-html5-app-host-service
+          ServiceKeyName: mycapdemo_html_repo_host-key
+          sap.cloud.service: capdemo.app
+        - Authentication: OAuth2UserTokenExchange
+          Name: capdemo_app_uaa_mycapdemo
+          ServiceInstanceName: mycapdemo-xsuaa-service
+          ServiceKeyName: uaa_mycapdemo-key
+          sap.cloud.service: capdemo.app
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: mycapdemo-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: mycapdemo_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - aetestcapdemoui.zip
+      name: aetestcapdemoui
+      target-path: resources/
+- name: aetestcapdemoui
+  type: html5
+  path: app/capdemoui
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: mycapdemo-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+  properties:
+    hdi-service-name: ${service-name}
+- name: mycapdemo-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: mycapdemo-destination-service
+    service-plan: lite
+- name: mycapdemo_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: mycapdemo-html5-app-host-service
+    service-plan: app-host
+- name: uaa_mycapdemo
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: mycapdemo-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm ci
+    - npx -p @sap/cds-dk cds build --production
